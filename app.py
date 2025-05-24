@@ -13,11 +13,25 @@ def load_my_model():
     if not os.path.exists(model_path):
         import gdown
         url = "https://drive.google.com/uc?id=1WgF1JCIAUlq65eSntmS0kCvdRvWRLrhH"
+        gdown.download(url, model_path, quiet=False)
+    
+    try:
+        # SOLUTION: Use direct tf.keras import with custom objects
+        from tensorflow.keras.models import load_model
+        from tensorflow.keras.layers import InputLayer
+        
+        # Try loading with different approaches
         try:
-            gdown.download(url, model_path, quiet=False)
-        except Exception as e:
-            st.error(f"❌ Model download failed: {str(e)}")
-            return None
+            return load_model(model_path, compile=False)
+        except:
+            return load_model(
+                model_path,
+                compile=False,
+                custom_objects={'InputLayer': InputLayer}
+            )
+    except Exception as e:
+        st.error(f"Model loading failed. Technical details: {str(e)}")
+        return None
     
     try:
         # Critical fix: Use legacy Keras loading
