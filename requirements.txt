@@ -1,7 +1,5 @@
-streamlit==1.29.0
-keras==2.9.0
-numpy==1.23.5  # Verified working version
-protobuf==3.20.3  # Essential for compatibility
-pillow==9.1.1
-gdown==4.7.1
-h5py==3.7.0  # Required for model loading
+streamlit
+tensorflow-cpu==2.10.0
+numpy<2
+pillow
+gdown
