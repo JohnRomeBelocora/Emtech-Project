@@ -1,5 +1,5 @@
 streamlit
-tensorflow-cpu
-numpy
+tensorflow-cpu>=2.15,<2.16
+numpy<2
 pillow
 gdown
