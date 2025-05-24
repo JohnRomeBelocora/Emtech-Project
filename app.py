@@ -1,11 +1,16 @@
 import streamlit as st
 from PIL import Image
+from tensorflow.keras.models import load_model
 import numpy as np
 import os
 
-# Force TensorFlow to use CPU only (reduces cloud errors)
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # Suppress TensorFlow warnings
-os.environ['CUDA_VISIBLE_DEVICES'] = '-1'  # Disable GPU
+# Conditional imports for TensorFlow 2.10
+try:
+    from tensorflow.keras.models import load_model
+    from tensorflow.keras.preprocessing import image
+except:
+    from keras.models import load_model
+    from keras.preprocessing import image
 
 @st.cache_resource
 def load_my_model():
@@ -14,63 +19,31 @@ def load_my_model():
         import gdown
         url = "https://drive.google.com/uc?id=1WgF1JCIAUlq65eSntmS0kCvdRvWRLrhH"
         gdown.download(url, model_path, quiet=False)
-    
-    try:
-        # SOLUTION: Use direct tf.keras import with custom objects
-        from tensorflow.keras.models import load_model
-        from tensorflow.keras.layers import InputLayer
-        
-        # Try loading with different approaches
-        try:
-            return load_model(model_path, compile=False)
-        except:
-            return load_model(
-                model_path,
-                compile=False,
-                custom_objects={'InputLayer': InputLayer}
-            )
-    except Exception as e:
-        st.error(f"Model loading failed. Technical details: {str(e)}")
-        return None
-    
-    try:
-        # Critical fix: Use legacy Keras loading
-        from tensorflow.python.keras.models import load_model
-        model = load_model(model_path, compile=False)
-        st.success("✅ Model loaded successfully!")
-        return model
-    except Exception as e:
-        st.error(f"❌ Model loading failed: {str(e)}")
-        return None
+    return load_model(model_path)
 
 model = load_my_model()
-if model is None:
-    st.stop()  # Stop if model fails to load
 
 st.title("Bird vs Drone Classifier")
 
-uploaded_file = st.file_uploader("Upload an image...", type=["jpg", "jpeg", "png"])
+uploaded_file = st.file_uploader("Upload an image...", type="jpeg")
 
 if uploaded_file is not None:
+    img = Image.open(uploaded_file)
+    st.image(img, caption='Uploaded Image', use_container_width=True)
+    
+    # Preprocess the image
+    img = img.resize((150, 150))  # Match model's expected input
+    img_array = image.img_to_array(img)
+    img_array = np.expand_dims(img_array, axis=0)
+    img_array /= 255.0
+    
+    # Make prediction
     try:
-        img = Image.open(uploaded_file).convert('RGB')
-        st.image(img, caption='Uploaded Image', use_container_width=True)
-        
-        # Get model's expected input shape dynamically
-        target_size = model.input_shape[1:3]  # (height, width)
-        img = img.resize(target_size)
-        
-        # Convert to array and normalize
-        img_array = np.array(img) / 255.0
-        img_array = np.expand_dims(img_array, axis=0)
-        
-        # Make prediction
         prediction = model.predict(img_array)
         class_names = ['Bird', 'Drone']
         predicted_class = class_names[int(np.round(prediction[0][0]))]
         
         st.success(f"Prediction: {predicted_class}")
         st.info(f"Confidence: {np.max(prediction)*100:.2f}%")
-        
     except Exception as e:
-        st.error(f"❌ Prediction failed: {str(e)}")
+        st.error(f"Prediction failed: {str(e)}")
